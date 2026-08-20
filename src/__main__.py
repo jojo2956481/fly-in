@@ -1,4 +1,5 @@
 from src.parsing_map import parser_file
+from src.algorithm import schedule_drones, decompose_drone_paths
 import argparse
 import sys
 import pygame
@@ -12,15 +13,42 @@ def take_arg():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--map", default=None)
+    parser.add_argument("--display")
     args = parser.parse_args()
     if args.map is None:
         print("Error no map selected")
         sys.exit(1)
-    return args.map
+    return args.map, args.display
+
+
+DRONE_COLOR = (0, 140, 200)
+DRONE_RADIUS = 5
+
+
+def interpolate_drone_position(path, sim_turn, world_positions):
+    if sim_turn < path[0][1] or sim_turn > path[-1][1]:
+        return None
+
+    for (hub_a, t_a), (hub_b, t_b) in zip(path, path[1:]):
+        if t_a <= sim_turn <= t_b:
+            if t_b == t_a:
+                progress = 0.0
+            else:
+                progress = (sim_turn - t_a) / (t_b - t_a)
+            xa, ya = world_positions[hub_a]
+            xb, yb = world_positions[hub_b]
+            return (xa + (xb - xa) * progress, ya + (yb - ya) * progress)
+
+    return world_positions[path[-1][0]]
 
 
 def display_interface(drone_map):
     world_positions = compute_world_layout(drone_map.hubs)
+    flow, horizon, residual, capacity, source, sink = schedule_drones(drone_map)
+    drone_paths = []
+    if flow >= drone_map.nb_drones:
+        drone_paths = decompose_drone_paths(capacity, residual, source, sink)
+    SECONDS_PER_TURN = 0.6
     pygame.init()
     width, height = WINDOW_W, WINDOW_H
     fullscreen = False
@@ -29,6 +57,7 @@ def display_interface(drone_map):
     font = pygame.font.SysFont("consolas", FONT_SIZE, bold=True)
     clock = pygame.time.Clock()
     camera = Camera(width, height)
+    sim_start_ticks = pygame.time.get_ticks()
     pending_size = None
     last_resize_event_ms = 0
     DEBOUNCE_MS = 80
@@ -78,7 +107,14 @@ def display_interface(drone_map):
             pending_size = None
             print("resize applique ->", width, height)
         draw_map(screen, drone_map, world_positions, camera)
-
+        elapsed_seconds = (pygame.time.get_ticks() - sim_start_ticks) / 1000
+        sim_turn = elapsed_seconds / SECONDS_PER_TURN
+        for path in drone_paths:
+            world_pos = interpolate_drone_position(path, sim_turn, world_positions)
+            if world_pos is not None:
+                screen_pos = camera.world_to_screen(*world_pos)
+                radius = max(2, int(DRONE_RADIUS * camera.zoom))
+                pygame.draw.circle(screen, DRONE_COLOR, screen_pos, radius)
 
         pygame.display.flip()
         clock.tick(60)
@@ -92,13 +128,19 @@ def display_data(drone_map):
             f"{hub.kind}, {hub.color}, {hub.zone},"
             f"{hub.max_drones}, {hub.neighbors}"
             )
+    for conection in drone_map.connections:
+        print(
+            f"{conection.src}-{conection.dst}, {conection.max_link_capacity}"
+        )
 
 
 def main():
-    path_map = take_arg()
+    path_map, display = take_arg()
     drone_map = parser_file(path_map)
-    display_interface(drone_map)
-    # display_data(drone_map)
+    if display == "data":
+        display_data(drone_map)
+    else:
+        display_interface(drone_map)
 
 
 if __name__ == "__main__":
