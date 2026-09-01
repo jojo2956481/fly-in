@@ -162,5 +162,6 @@ def decompose_drone_paths(capacity, residual, source, sink):
 
     return drone_paths
 
+
 def simulation(drone_map):
     return schedule_drones(drone_map)

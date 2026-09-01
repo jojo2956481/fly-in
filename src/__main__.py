@@ -54,7 +54,7 @@ def display_interface(drone_map):
     fullscreen = False
     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     pygame.display.set_caption("Fly-in — Map Viewer")
-    font = pygame.font.SysFont("consolas", FONT_SIZE, bold=True)
+    # font = pygame.font.SysFont("consolas", FONT_SIZE, bold=True)
     clock = pygame.time.Clock()
     camera = Camera(width, height)
     sim_start_ticks = pygame.time.get_ticks()
