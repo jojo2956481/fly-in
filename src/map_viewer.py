@@ -59,6 +59,11 @@ class Camera:
         self.width = width
         self.height = height
 
+    def reset(self):
+        self.x = 0.0
+        self.y = 0.0
+        self.zoom = 1.0
+
     def world_to_screen(self, wx, wy):
         sx = (wx - self.x) * self.zoom + self.width / 2
         sy = (wy - self.y) * self.zoom + self.height / 2

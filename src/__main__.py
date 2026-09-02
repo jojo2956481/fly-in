@@ -1,5 +1,6 @@
 from src.parsing_map import parser_file
-from src.algorithm import schedule_drones, decompose_drone_paths
+# from src.algorithm import schedule_drones, decompose_drone_paths
+from src.dijkstra_reservation_tab import schedule_drones
 import argparse
 import sys
 import pygame
@@ -44,17 +45,14 @@ def interpolate_drone_position(path, sim_turn, world_positions):
 
 def display_interface(drone_map):
     world_positions = compute_world_layout(drone_map.hubs)
-    flow, horizon, residual, capacity, source, sink = schedule_drones(drone_map)
     drone_paths = []
-    if flow >= drone_map.nb_drones:
-        drone_paths = decompose_drone_paths(capacity, residual, source, sink)
+    drone_paths, horizon = schedule_drones(drone_map)
     SECONDS_PER_TURN = 0.6
     pygame.init()
     width, height = WINDOW_W, WINDOW_H
     fullscreen = False
     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     pygame.display.set_caption("Fly-in — Map Viewer")
-    # font = pygame.font.SysFont("consolas", FONT_SIZE, bold=True)
     clock = pygame.time.Clock()
     camera = Camera(width, height)
     sim_start_ticks = pygame.time.get_ticks()
@@ -82,6 +80,10 @@ def display_interface(drone_map):
                 else:
                     width, height = WINDOW_W, WINDOW_H
                     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+                camera.reset()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                running = False
                 camera.resize(width, height)
             elif event.type == pygame.MOUSEWHEEL:
                 factor = ZOOM_STEP if event.y > 0 else (1 / ZOOM_STEP)

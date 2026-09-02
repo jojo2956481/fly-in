@@ -161,17 +161,3 @@ def schedule_drones(drone_map, max_horizon=200):
 
     horizon = max((p[-1][1] for p in drone_paths), default=0)
     return drone_paths, horizon
-
-
-if __name__ == "__main__":
-    from src.parsing_map import parser_file
-
-    drone_map = parser_file("maps/challenger/01_the_impossible_dream.txt")
-    drone_paths, horizon = schedule_drones(drone_map)
-
-    print(f"Demande         : {drone_map.nb_drones} drones")
-    print(f"Drones routés   : {len(drone_paths)}")
-    print(f"Horizon (dernier arrivé) : {horizon} tours")
-    print()
-    for i, path in enumerate(drone_paths):
-        print(f"drone {i}: " + " -> ".join(f"{h}@{t}" for h, t in path))
