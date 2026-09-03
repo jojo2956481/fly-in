@@ -10,8 +10,8 @@ start_hub: start 0 0 [color=green]
 
 # Single-file entry gates (extreme bottleneck)
 hub: gate_hell1 2 0 [color=red max_drones=1]
-hub: gate_hell2 3 0 [color=red max_drones=1]
-hub: gate_hell3 4 0 [zone=blocked color=red max_drones=1]
+hub: gate_hell2 3 0 [zone=blocked color=red max_drones=1]
+hub: gate_hell3 4 0 [color=red max_drones=1]
 hub: gate_hell4 5 0 [color=red max_drones=1]
 hub: gate_hell5 6 0 [color=red max_drones=1]
 
@@ -187,3 +187,4 @@ connection: final_torture5-impossible_goal
 connection: overflow_hell1-conv_restricted1
 connection: overflow_hell4-conv_restricted7
 connection: priority_trap1-conv_restricted4
+

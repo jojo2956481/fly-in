@@ -1,7 +1,7 @@
 import pygame
 
 
-WINDOW_W, WINDOW_H = 1000, 700
+WINDOW_W, WINDOW_H = 2000, 1000
 MARGIN = 60
 BG_COLOR = (250, 240, 217)
 LINE_COLOR = (150, 140, 120)
@@ -14,7 +14,7 @@ FONT_SIZE = 12
 FONT_SIZE_MIN = 18
 FONT_SIZE_MAX = 22
 
-UNIT_SCALE = 80   # 60 default
+UNIT_SCALE = 80
 ZOOM_MIN, ZOOM_MAX = 0.15, 6.0
 ZOOM_STEP = 1.15
 
@@ -48,21 +48,31 @@ def compute_world_layout(hubs, unit_scale=UNIT_SCALE):
 
 class Camera:
 
-    def __init__(self, width, height):
-        self.x = 0.0
-        self.y = 0.0
-        self.zoom = 1.0
+    def __init__(self, width, height, max_x, max_y, min_x, min_y):
+        self.x = (((max_x - min_x) / 2) + min_x) * UNIT_SCALE
+        self.y = (((max_y - min_y) / 2) + min_y) * UNIT_SCALE
         self.width = width
         self.height = height
+        margin = 50
+        map_width = (max_x - min_x) * UNIT_SCALE
+        map_height = (max_y - min_y) * UNIT_SCALE
+        zoom_x = width / (map_width + margin)
+        zoom_y = height / (map_height + margin)
+        self.dep_zoom = min(zoom_x, zoom_y)
+        self.zoom = self.dep_zoom
+        self.max_y = max_y
+        self.max_x = max_x
+        self.min_y = min_y
+        self.min_x = min_x
 
     def resize(self, width, height):
         self.width = width
         self.height = height
 
     def reset(self):
-        self.x = 0.0
-        self.y = 0.0
-        self.zoom = 1.0
+        self.x = (((self.max_x - self.min_x) / 2) + self.min_x) * UNIT_SCALE
+        self.y = (((self.max_y - self.min_y) / 2) + self.min_y) * UNIT_SCALE
+        self.zoom = self.dep_zoom
 
     def world_to_screen(self, wx, wy):
         sx = (wx - self.x) * self.zoom + self.width / 2
@@ -137,16 +147,78 @@ def draw_map(screen, drone_map, world_positions, camera):
             screen.blit(label, (label_x, label_y))
 
 
-# queue[(distance=0, tie_BREAKER=i++, hub=A)]
+def window_controle_info(screen):
+    width, height = screen.get_size()
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 0))
+    screen.blit(overlay, (0, 0))
+    window_width = 300
+    window_height = 200
+    margin = 20
+    window = pygame.Rect(
+        width - window_width - margin,
+        margin,
+        window_width,
+        window_height
+    )
+    window_surface = pygame.Surface(
+        (window_width, window_height),
+        pygame.SRCALPHA
+    )
+    window_surface.fill((0, 0, 0, 0))
+    pygame.draw.rect(
+        window_surface,
+        (255, 255, 255, 255),
+        window, 2,
+        border_radius=10
+    )
 
-# distance, i, hub = queue.pop()
+    font = pygame.font.Font(None, 36)
 
-# hub.voisin
+    title = font.render("Informations", True, (0, 0, 0))
+    screen.blit(title, (window.x + 20, window.y + 20))
 
-# (3, 1, voisin.b)
-# (3, 2, voisin.c)
+    text = font.render("Press Esc to close", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 80))
 
-# queue[(3, B), (3, C)]
+    text = font.render("Press c to refocus", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 140))
 
-# distance, hub = queue.pop()
+
+def window_simu_info(screen, nb_drones, horizon):
+    width, height = screen.get_size()
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 0))
+    screen.blit(overlay, (0, 0))
+    window_width = 300
+    window_height = 200
+    margin = 20
+    window = pygame.Rect(
+        margin,
+        margin,
+        window_width,
+        window_height
+    )
+    window_surface = pygame.Surface(
+        (window_width, window_height),
+        pygame.SRCALPHA
+    )
+    window_surface.fill((0, 0, 0, 0))
+    pygame.draw.rect(
+        window_surface,
+        (255, 255, 255, 255),
+        window, 2,
+        border_radius=10
+    )
+    font = pygame.font.Font(None, 36)
+
+    title = font.render("Simulation", True, (0, 0, 0))
+    screen.blit(title, (window.x + 20, window.y + 20))
+
+    text = font.render(f"drone : {nb_drones}", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 80))
+
+    text = font.render(f"tours : {horizon}", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 140))
+
 

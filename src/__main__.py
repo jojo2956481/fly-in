@@ -1,11 +1,10 @@
 from src.parsing_map import parser_file
-# from src.algorithm import schedule_drones, decompose_drone_paths
 from src.dijkstra_reservation_tab import schedule_drones
 import argparse
 import sys
 import pygame
 from src.map_viewer import (
-    compute_world_layout, draw_map,
+    compute_world_layout, draw_map, window_controle_info, window_simu_info,
     WINDOW_W, WINDOW_H, FONT_SIZE, Camera, ZOOM_STEP
                 )
 
@@ -47,6 +46,7 @@ def display_interface(drone_map):
     world_positions = compute_world_layout(drone_map.hubs)
     drone_paths = []
     drone_paths, horizon = schedule_drones(drone_map)
+    print(drone_paths)
     SECONDS_PER_TURN = 0.6
     pygame.init()
     width, height = WINDOW_W, WINDOW_H
@@ -54,7 +54,12 @@ def display_interface(drone_map):
     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     pygame.display.set_caption("Fly-in — Map Viewer")
     clock = pygame.time.Clock()
-    camera = Camera(width, height)
+    max_x = max([hub.x for hub in drone_map.hubs])
+    max_y = max([hub.y for hub in drone_map.hubs])
+    min_x = min([hub.x for hub in drone_map.hubs])
+    min_y = min([hub.y for hub in drone_map.hubs])
+    print(max_x, max_y, min_x, min_y)
+    camera = Camera(width, height, max_x, max_y, min_x, min_y)
     sim_start_ticks = pygame.time.get_ticks()
     pending_size = None
     last_resize_event_ms = 0
@@ -117,7 +122,8 @@ def display_interface(drone_map):
                 screen_pos = camera.world_to_screen(*world_pos)
                 radius = max(2, int(DRONE_RADIUS * camera.zoom))
                 pygame.draw.circle(screen, DRONE_COLOR, screen_pos, radius)
-
+        window_controle_info(screen)
+        window_simu_info(screen, drone_map.nb_drones, horizon)
         pygame.display.flip()
         clock.tick(60)
     pygame.quit()
