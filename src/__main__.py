@@ -61,12 +61,16 @@ def display_interface(drone_map):
     print(max_x, max_y, min_x, min_y)
     camera = Camera(width, height, max_x, max_y, min_x, min_y)
     sim_start_ticks = pygame.time.get_ticks()
+    manual_mode = False
+    manual_turn = 0
+    sim_turn = 0.0
     pending_size = None
     last_resize_event_ms = 0
     DEBOUNCE_MS = 80
     panning = False
     last_mouse_pos = None
     running = True
+    temp = -1
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -87,6 +91,23 @@ def display_interface(drone_map):
                     screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
                 camera.reset()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                manual_mode = False
+                manual_turn = 0
+                sim_start_ticks = pygame.time.get_ticks()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_RIGHT:
+                if not manual_mode:
+                    manual_mode = True
+                    manual_turn = int(sim_turn)
+                manual_turn = min(manual_turn + 1, horizon)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
+                if not manual_mode:
+                    manual_mode = True
+                    manual_turn = int(sim_turn)
+                manual_turn = max(manual_turn - 1, 0)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                manual_mode = False
+                sim_start_ticks = pygame.time.get_ticks() - int(manual_turn * SECONDS_PER_TURN * 1000)
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
                 camera.resize(width, height)
@@ -114,8 +135,11 @@ def display_interface(drone_map):
             pending_size = None
             print("resize applique ->", width, height)
         draw_map(screen, drone_map, world_positions, camera)
-        elapsed_seconds = (pygame.time.get_ticks() - sim_start_ticks) / 1000
-        sim_turn = elapsed_seconds / SECONDS_PER_TURN
+        if manual_mode:
+            sim_turn = float(manual_turn)
+        else:
+            elapsed_seconds = (pygame.time.get_ticks() - sim_start_ticks) / 1000
+            sim_turn = elapsed_seconds / SECONDS_PER_TURN
         for path in drone_paths:
             world_pos = interpolate_drone_position(path, sim_turn, world_positions)
             if world_pos is not None:
@@ -123,7 +147,19 @@ def display_interface(drone_map):
                 radius = max(2, int(DRONE_RADIUS * camera.zoom))
                 pygame.draw.circle(screen, DRONE_COLOR, screen_pos, radius)
         window_controle_info(screen)
-        window_simu_info(screen, drone_map.nb_drones, horizon)
+        if manual_mode:
+            pass
+        id = 1
+        dis = ""
+        for path in drone_paths:
+            result = next((x for x in path if x[1] == int(sim_turn + 1)), None)
+            if result:
+                dis += f"D{id}-{result[0]} "
+            id = id + 1
+        if temp != int(sim_turn) and sim_turn < horizon:
+            print(dis)
+        temp = int(sim_turn)
+        window_simu_info(screen, drone_map.nb_drones, int(sim_turn), horizon)
         pygame.display.flip()
         clock.tick(60)
     pygame.quit()

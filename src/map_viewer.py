@@ -49,8 +49,9 @@ def compute_world_layout(hubs, unit_scale=UNIT_SCALE):
 class Camera:
 
     def __init__(self, width, height, max_x, max_y, min_x, min_y):
-        self.x = (((max_x - min_x) / 2) + min_x) * UNIT_SCALE
-        self.y = (((max_y - min_y) / 2) + min_y) * UNIT_SCALE
+        self.x = ((max_x + min_x) / 2) * UNIT_SCALE
+        self.y = -((max_y + min_y) / 2) * UNIT_SCALE
+        print(self.x, self.y)
         self.width = width
         self.height = height
         margin = 50
@@ -70,8 +71,8 @@ class Camera:
         self.height = height
 
     def reset(self):
-        self.x = (((self.max_x - self.min_x) / 2) + self.min_x) * UNIT_SCALE
-        self.y = (((self.max_y - self.min_y) / 2) + self.min_y) * UNIT_SCALE
+        self.x = ((self.max_x + self.min_x) / 2) * UNIT_SCALE
+        self.y = -((self.max_y + self.min_y) / 2) * UNIT_SCALE
         self.zoom = self.dep_zoom
 
     def world_to_screen(self, wx, wy):
@@ -154,10 +155,11 @@ def window_controle_info(screen):
     screen.blit(overlay, (0, 0))
     window_width = 300
     window_height = 200
-    margin = 20
+    margin_y = 20
+    margin_x = 150
     window = pygame.Rect(
-        width - window_width - margin,
-        margin,
+        width - window_width - margin_x,
+        margin_y,
         window_width,
         window_height
     )
@@ -175,7 +177,7 @@ def window_controle_info(screen):
 
     font = pygame.font.Font(None, 36)
 
-    title = font.render("Informations", True, (0, 0, 0))
+    title = font.render("---Informations---", True, (0, 0, 0))
     screen.blit(title, (window.x + 20, window.y + 20))
 
     text = font.render("Press Esc to close", True, (0, 0, 0))
@@ -184,8 +186,17 @@ def window_controle_info(screen):
     text = font.render("Press c to refocus", True, (0, 0, 0))
     screen.blit(text, (window.x + 20, window.y + 140))
 
+    text = font.render("Press <- and -> go manual mode", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 200))
 
-def window_simu_info(screen, nb_drones, horizon):
+    text = font.render("Press escape to quit manual mode", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 260))
+
+    text = font.render("Press r to restart simulation", True, (0, 0, 0))
+    screen.blit(text, (window.x + 20, window.y + 320))
+
+
+def window_simu_info(screen, nb_drones, elapse, horizon):
     width, height = screen.get_size()
     overlay = pygame.Surface((width, height), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 0))
@@ -210,15 +221,15 @@ def window_simu_info(screen, nb_drones, horizon):
         window, 2,
         border_radius=10
     )
+    if elapse == horizon or elapse > horizon:
+        elapse = horizon
     font = pygame.font.Font(None, 36)
 
-    title = font.render("Simulation", True, (0, 0, 0))
+    title = font.render("----Simulation----", True, (0, 0, 0))
     screen.blit(title, (window.x + 20, window.y + 20))
 
     text = font.render(f"drone : {nb_drones}", True, (0, 0, 0))
     screen.blit(text, (window.x + 20, window.y + 80))
 
-    text = font.render(f"tours : {horizon}", True, (0, 0, 0))
+    text = font.render(f"tours : {elapse}", True, (0, 0, 0))
     screen.blit(text, (window.x + 20, window.y + 140))
-
-

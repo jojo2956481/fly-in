@@ -33,12 +33,13 @@ class ReservationTable:
 
 def dijkstra_spacetime(drone_map, start_name, end_name, reservation, max_horizon):
     hub_by_name = {h.name: h for h in drone_map.hubs}
+    start_key = (0, 0)
     start_state = (start_name, 0)
-    dist = {start_state: 0}
+    dist = {start_state: start_key}
     parent = {start_state: None}
-    pq = [(0, start_state)]
+    pq = [(start_key, start_state)]
     while pq:
-        turn, (hub_name, t) = heapq.heappop(pq)
+        key, (hub_name, t) = heapq.heappop(pq)
 
         if hub_name == end_name:
             path = []
@@ -49,20 +50,20 @@ def dijkstra_spacetime(drone_map, start_name, end_name, reservation, max_horizon
             path.reverse()
             return path
 
-        if turn > dist.get((hub_name, t), float("inf")):
-            continue 
+        if key > dist.get((hub_name, t), (float("inf"), float("inf"))):
+            continue
         if t >= max_horizon:
             continue
 
         hub = hub_by_name[hub_name]
         nt = t + 1
         if reservation.hub_has_room(hub_name, nt, hub.max_drones):
-            _relax(dist, parent, pq, (hub_name, t), (hub_name, nt))
+            relax(dist, parent, pq, (hub_name, t), (hub_name, nt), key[1])
         for neighbor_name in hub.neighbors:
             neighbor = hub_by_name[neighbor_name]
             cost = zone_cost(neighbor.zone)
             if cost is None:
-                continue  
+                continue
             nt = t + cost
             if nt > max_horizon:
                 continue
@@ -74,17 +75,18 @@ def dijkstra_spacetime(drone_map, start_name, end_name, reservation, max_horizon
                 continue
             if not reservation.hub_has_room(neighbor_name, nt, neighbor.max_drones):
                 continue
-            _relax(dist, parent, pq, (hub_name, t), (neighbor_name, nt))
+            penalty = key[1] + (0 if neighbor.zone == "priority" else 1)
+            relax(dist, parent, pq, (hub_name, t), (neighbor_name, nt), penalty)
 
     return None
 
 
-def _relax(dist, parent, pq, current_state, next_state):
-    new_turn = next_state[1]
-    if new_turn < dist.get(next_state, float("inf")):
-        dist[next_state] = new_turn
+def relax(dist, parent, pq, current_state, next_state, penalty):
+    new_key = (next_state[1], penalty)
+    if new_key < dist.get(next_state, (float("inf"), float("inf"))):
+        dist[next_state] = new_key
         parent[next_state] = current_state
-        heapq.heappush(pq, (new_turn, next_state))
+        heapq.heappush(pq, (new_key, next_state))
 
 
 def schedule_drones(drone_map, max_horizon=200):
