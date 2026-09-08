@@ -4,15 +4,12 @@ nb_drones: 2
 start_hub: start 0 0 [color=green]
 
 # Single-file entry gates (extreme bottleneck)
-hub: gate_hell1 2 0 [zone=restricted color=red max_drones=1]
-hub: gate_hell2 3 0 [color=green max_drones=1]
-hub: gate_hell3 3 1 [zone=priority color=red max_drones=1]
+hub: gate_hell1 2 0 [color=red max_drones=1]
+hub: gate_hell2 2 0 [color=red max_drones=1]
 hub: gate_hell4 5 0 [color=red max_drones=1]
 end_hub: impossible_goal 6 0 [color=rainbow]
 
 connection: start-gate_hell1 [max_link_capacity=2]
 connection: gate_hell1-gate_hell2 [max_link_capacity=1]
-connection: gate_hell1-gate_hell3 [max_link_capacity=1]
-connection: gate_hell3-gate_hell4 [max_link_capacity=1]
 connection: gate_hell2-gate_hell4 [max_link_capacity=1]
 connection: gate_hell4-impossible_goal [max_link_capacity=1]

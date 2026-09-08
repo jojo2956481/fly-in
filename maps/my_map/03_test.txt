@@ -1,0 +1,17 @@
+nb_drones: 3
+
+# === LAYER 0: The Nightmare Begins ===
+start_hub: start 0 0 [color=green]
+
+# Single-file entry gates (extreme bottleneck)
+hub: gate_hell1 2 0 [color=red max_drones=1]
+hub: gate_hell2 2 1 [color=red max_drones=1]
+hub: gate_hell3 2 -1 [zone=priority color=red max_drones=1]
+end_hub: impossible_goal 6 0 [color=rainbow]
+
+connection: start-gate_hell1 [max_link_capacity=2]
+connection: start-gate_hell2 [max_link_capacity=1]
+connection: start-gate_hell3 [max_link_capacity=1]
+connection: gate_hell1-impossible_goal [max_link_capacity=1]
+connection: gate_hell2-impossible_goal [max_link_capacity=1]
+connection: gate_hell3-impossible_goal [max_link_capacity=1]

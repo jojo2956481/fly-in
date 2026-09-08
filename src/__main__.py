@@ -14,11 +14,12 @@ def take_arg():
 
     parser.add_argument("--map", default=None)
     parser.add_argument("--display")
+    parser.add_argument("--capacity-info", action="store_true")
     args = parser.parse_args()
     if args.map is None:
         print("Error no map selected")
         sys.exit(1)
-    return args.map, args.display
+    return args.map, args.display, args.capacity_info
 
 
 DRONE_COLOR = (0, 140, 200)
@@ -42,10 +43,22 @@ def interpolate_drone_position(path, sim_turn, world_positions):
     return world_positions[path[-1][0]]
 
 
-def display_interface(drone_map):
+def capacity_info(drone_map, drone_path, turn):
+    hub_capacity = [t[0] for sublist in drone_path for t in sublist if t[1] == turn]
+    print("---info---")
+    for hub in drone_map.hubs:
+        count = 0
+        if hub.name in hub_capacity:
+            count = hub_capacity.count(hub.name)
+        print(f"{hub.name}: {count} / {hub.max_drones}")
+
+
+def display_interface(drone_map, capacity):
     world_positions = compute_world_layout(drone_map.hubs)
     drone_paths = []
     drone_paths, horizon = schedule_drones(drone_map)
+    if not drone_paths:
+        raise ValueError("The map is impossible to solve")
     print(drone_paths)
     SECONDS_PER_TURN = 0.6
     pygame.init()
@@ -151,15 +164,20 @@ def display_interface(drone_map):
             pass
         id = 1
         dis = ""
+        dst = None
         for path in drone_paths:
             result = next((x for x in path if x[1] == int(sim_turn + 1)), None)
+            res = next((x for x in path if x[1] == int(sim_turn + 2)), None)
             if result:
                 dis += f"D{id}-{result[0]} "
-            # if result is None and int(sim_turn) != horizon:
-            #     dis += f"D{id}-{}"
+            if result is None and res:
+                dst = next((x for x in path if x[1] == int(sim_turn)), None)
+                dis += f"D{id}-{dst[0]}-{res[0]} "
             id = id + 1
         if temp != int(sim_turn) and sim_turn < horizon:
-            print(dis, f"tour={int(sim_turn)}")
+            if capacity:
+                capacity_info(drone_map, drone_paths, int(sim_turn))
+            print(dis)
         temp = int(sim_turn)
         window_simu_info(screen, drone_map.nb_drones, int(sim_turn), horizon)
         pygame.display.flip()
@@ -181,12 +199,12 @@ def display_data(drone_map):
 
 
 def main():
-    path_map, display = take_arg()
+    path_map, display, capacity = take_arg()
     drone_map = parser_file(path_map)
     if display == "data":
         display_data(drone_map)
     else:
-        display_interface(drone_map)
+        display_interface(drone_map, capacity)
 
 
 if __name__ == "__main__":

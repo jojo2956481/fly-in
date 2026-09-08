@@ -124,6 +124,7 @@ def parser_file(path_map: str) -> Map_format:
     hubs: list[Hub] = []
     conn_lines: list[int] = []
     seen_names: set[str] = set()
+    seen_coords: set[tuple[int, int]] = set()
     connections: list[Connection] = []
     map = load_map(path_map)
     for nb_line, raw_line in enumerate(map, start=1):
@@ -146,6 +147,11 @@ def parser_file(path_map: str) -> Map_format:
                 raise ValueError(
                     f"Line {nb_line}: duplicate hub name '{name}'")
             seen_names.add(name)
+            coord = (int(x), int(y))
+            if coord in seen_coords:
+                raise ValueError(
+                    f"Line {nb_line}: duplicate hub coordinates {coord}")
+            seen_coords.add(coord)
             attrs = parse_attrs(attr_str or "", nb_line)
             kind = {"start_hub": "start", "hub": "hub",
                     "end_hub": "end"}[kind_raw]
