@@ -155,9 +155,11 @@ def display_interface(drone_map):
             result = next((x for x in path if x[1] == int(sim_turn + 1)), None)
             if result:
                 dis += f"D{id}-{result[0]} "
+            # if result is None and int(sim_turn) != horizon:
+            #     dis += f"D{id}-{}"
             id = id + 1
         if temp != int(sim_turn) and sim_turn < horizon:
-            print(dis)
+            print(dis, f"tour={int(sim_turn)}")
         temp = int(sim_turn)
         window_simu_info(screen, drone_map.nb_drones, int(sim_turn), horizon)
         pygame.display.flip()
