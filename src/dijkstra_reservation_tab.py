@@ -89,10 +89,26 @@ def relax(dist, parent, pq, current_state, next_state, penalty):
         heapq.heappush(pq, (new_key, next_state))
 
 
+def annotate_path(path, hub_by_name):
+    if not path:
+        return []
+
+    annotated = [(path[0][0], path[0][1], "move")]
+    for (hub_a, t_a), (hub_b, t_b) in zip(path, path[1:]):
+        if hub_a == hub_b:
+            annotated.append((hub_b, t_b, "wait"))
+        elif t_b - t_a == 2 and hub_by_name[hub_b].zone == "restricted":
+            annotated.append((hub_b, t_a + 1, "transit"))
+            annotated.append((hub_b, t_b, "move"))
+        else:
+            annotated.append((hub_b, t_b, "move"))
+    return annotated
+
+
 def schedule_drones(drone_map, max_horizon=200):
     start = next(h for h in drone_map.hubs if h.kind == "start")
     end = next(h for h in drone_map.hubs if h.kind == "end")
-
+    hub_by_name = {h.name: h for h in drone_map.hubs}
     reservation = ReservationTable()
     drone_paths = []
 
@@ -103,7 +119,7 @@ def schedule_drones(drone_map, max_horizon=200):
         if path is None:
             continue
         reservation.reserve_path(path)
-        drone_paths.append(path)
+        drone_paths.append(annotate_path(path, hub_by_name))
 
     horizon = max((p[-1][1] for p in drone_paths), default=0)
     return drone_paths, horizon

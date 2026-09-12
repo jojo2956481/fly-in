@@ -30,7 +30,7 @@ def interpolate_drone_position(path, sim_turn, world_positions):
     if sim_turn < path[0][1] or sim_turn > path[-1][1]:
         return None
 
-    for (hub_a, t_a), (hub_b, t_b) in zip(path, path[1:]):
+    for (hub_a, t_a, _), (hub_b, t_b, _) in zip(path, path[1:]):
         if t_a <= sim_turn <= t_b:
             if t_b == t_a:
                 progress = 0.0
@@ -43,14 +43,19 @@ def interpolate_drone_position(path, sim_turn, world_positions):
     return world_positions[path[-1][0]]
 
 
-def capacity_info(drone_map, drone_path, turn):
-    hub_capacity = [t[0] for sublist in drone_path for t in sublist if t[1] == turn]
-    print("---info---")
+def capacity_info(drone_map, drone_paths, turn):
+    print(f"--- tour {turn} ---")
     for hub in drone_map.hubs:
-        count = 0
-        if hub.name in hub_capacity:
-            count = hub_capacity.count(hub.name)
-        print(f"{hub.name}: {count} / {hub.max_drones}")
+        count = sum(
+            1
+            for path in drone_paths
+            for (name, t, state) in path
+            if name == hub.name and t == turn
+        )
+        label = f"{hub.name}: {count} / {hub.max_drones}"
+        if hub.zone == "restricted":
+            label += "  (restricted)"
+        print(label)
 
 
 def display_interface(drone_map, capacity):
@@ -84,6 +89,7 @@ def display_interface(drone_map, capacity):
     last_mouse_pos = None
     running = True
     temp = -1
+    finish = 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -174,7 +180,7 @@ def display_interface(drone_map, capacity):
                 dst = next((x for x in path if x[1] == int(sim_turn)), None)
                 dis += f"D{id}-{dst[0]}-{res[0]} "
             id = id + 1
-        if temp != int(sim_turn) and sim_turn < horizon:
+        if temp < int(sim_turn) and sim_turn < horizon + 1:
             if capacity:
                 capacity_info(drone_map, drone_paths, int(sim_turn))
             print(dis)

@@ -1,4 +1,4 @@
-nb_drones: 2
+nb_drones: 3
 
 # === LAYER 0: The Nightmare Begins ===
 start_hub: start 0 0 [color=green]
