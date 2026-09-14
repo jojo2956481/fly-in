@@ -68,6 +68,8 @@ def parse_attrs(attr_str: str, nb_line: int) -> dict:
                         "normal", "blocked",
                         "restricted", "priority"):
                     raise ValueError(f"Line {nb_line} unknown : {value}")
+            if key in attrs:
+                raise ValueError(f"Line {nb_line} dublicate : {value}")
             attrs[key] = value
     return attrs
 

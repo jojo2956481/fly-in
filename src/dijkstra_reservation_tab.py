@@ -98,7 +98,8 @@ def annotate_path(path, hub_by_name):
         if hub_a == hub_b:
             annotated.append((hub_b, t_b, "wait"))
         elif t_b - t_a == 2 and hub_by_name[hub_b].zone == "restricted":
-            annotated.append((hub_b, t_a + 1, "transit"))
+            name = f"{hub_a}-{hub_b}"
+            annotated.append((name, t_a + 1, "transit"))
             annotated.append((hub_b, t_b, "move"))
         else:
             annotated.append((hub_b, t_b, "move"))

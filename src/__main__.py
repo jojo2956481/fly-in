@@ -3,6 +3,7 @@ from src.dijkstra_reservation_tab import schedule_drones
 import argparse
 import sys
 import pygame
+import copy
 from src.map_viewer import (
     compute_world_layout, draw_map, window_controle_info, window_simu_info,
     WINDOW_W, WINDOW_H, FONT_SIZE, Camera, ZOOM_STEP
@@ -13,49 +14,67 @@ def take_arg():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--map", default=None)
-    parser.add_argument("--display")
     parser.add_argument("--capacity-info", action="store_true")
     args = parser.parse_args()
     if args.map is None:
         print("Error no map selected")
         sys.exit(1)
-    return args.map, args.display, args.capacity_info
+    return args.map, args.capacity_info
 
 
 DRONE_COLOR = (0, 140, 200)
 DRONE_RADIUS = 5
 
 
+def resolve_position(name, world_positions):
+    """Position monde d'une étape : hub direct, ou point milieu si c'est
+    une connexion 'src-dst' (tour de transit)."""
+    if name in world_positions:
+        return world_positions[name]
+    src, dst = name.split("-", 1)
+    xa, ya = world_positions[src]
+    xb, yb = world_positions[dst]
+    return ((xa + xb) / 2, (ya + yb) / 2)
+
+
 def interpolate_drone_position(path, sim_turn, world_positions):
     if sim_turn < path[0][1] or sim_turn > path[-1][1]:
         return None
-
-    for (hub_a, t_a, _), (hub_b, t_b, _) in zip(path, path[1:]):
+    for (name_a, t_a, _), (name_b, t_b, _) in zip(path, path[1:]):
         if t_a <= sim_turn <= t_b:
             if t_b == t_a:
                 progress = 0.0
             else:
                 progress = (sim_turn - t_a) / (t_b - t_a)
-            xa, ya = world_positions[hub_a]
-            xb, yb = world_positions[hub_b]
+            xa, ya = resolve_position(name_a, world_positions)
+            xb, yb = resolve_position(name_b, world_positions)
             return (xa + (xb - xa) * progress, ya + (yb - ya) * progress)
 
-    return world_positions[path[-1][0]]
+    return resolve_position(path[-1][0], world_positions)
 
 
-def capacity_info(drone_map, drone_paths, turn):
+def capacity_info(drone_map, drone_paths, turn, finish):
     print(f"--- tour {turn} ---")
+    lst_hub = []
     for hub in drone_map.hubs:
-        count = sum(
+        if hub.zone == "restricted":
+            conn = copy.deepcopy(hub)
+            conn.name = f"{lst_hub[-1].name}-{hub.name}"
+            lst_hub.append(conn)
+        lst_hub.append(hub)
+    for hub in lst_hub:
+        count_hub = sum(
             1
             for path in drone_paths
             for (name, t, state) in path
             if name == hub.name and t == turn
         )
-        label = f"{hub.name}: {count} / {hub.max_drones}"
-        if hub.zone == "restricted":
-            label += "  (restricted)"
+        label = f"{hub.name}: {count_hub} / {hub.max_drones}"
+        if hub.kind == "end" and count_hub > 0:
+            finish += 1
+            label = f"{hub.name}: {finish} / {hub.max_drones}"
         print(label)
+    return finish
 
 
 def display_interface(drone_map, capacity):
@@ -76,7 +95,6 @@ def display_interface(drone_map, capacity):
     max_y = max([hub.y for hub in drone_map.hubs])
     min_x = min([hub.x for hub in drone_map.hubs])
     min_y = min([hub.y for hub in drone_map.hubs])
-    print(max_x, max_y, min_x, min_y)
     camera = Camera(width, height, max_x, max_y, min_x, min_y)
     sim_start_ticks = pygame.time.get_ticks()
     manual_mode = False
@@ -111,6 +129,7 @@ def display_interface(drone_map, capacity):
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
                 camera.reset()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                finish = 0
                 manual_mode = False
                 manual_turn = 0
                 sim_start_ticks = pygame.time.get_ticks()
@@ -123,6 +142,8 @@ def display_interface(drone_map, capacity):
                 if not manual_mode:
                     manual_mode = True
                     manual_turn = int(sim_turn)
+                if finish > 0:
+                    finish -= 1
                 manual_turn = max(manual_turn - 1, 0)
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 manual_mode = False
@@ -170,19 +191,14 @@ def display_interface(drone_map, capacity):
             pass
         id = 1
         dis = ""
-        dst = None
         for path in drone_paths:
             result = next((x for x in path if x[1] == int(sim_turn + 1)), None)
-            res = next((x for x in path if x[1] == int(sim_turn + 2)), None)
             if result:
                 dis += f"D{id}-{result[0]} "
-            if result is None and res:
-                dst = next((x for x in path if x[1] == int(sim_turn)), None)
-                dis += f"D{id}-{dst[0]}-{res[0]} "
             id = id + 1
         if temp < int(sim_turn) and sim_turn < horizon + 1:
             if capacity:
-                capacity_info(drone_map, drone_paths, int(sim_turn))
+                finish = capacity_info(drone_map, drone_paths, int(sim_turn), finish)
             print(dis)
         temp = int(sim_turn)
         window_simu_info(screen, drone_map.nb_drones, int(sim_turn), horizon)
@@ -191,26 +207,10 @@ def display_interface(drone_map, capacity):
     pygame.quit()
 
 
-def display_data(drone_map):
-    for hub in drone_map.hubs:
-        print(
-            f"{hub.name}, {hub.x}, {hub.y},"
-            f"{hub.kind}, {hub.color}, {hub.zone},"
-            f"{hub.max_drones}, {hub.neighbors}"
-            )
-    for conection in drone_map.connections:
-        print(
-            f"{conection.src}-{conection.dst}, {conection.max_link_capacity}"
-        )
-
-
 def main():
-    path_map, display, capacity = take_arg()
+    path_map, capacity = take_arg()
     drone_map = parser_file(path_map)
-    if display == "data":
-        display_data(drone_map)
-    else:
-        display_interface(drone_map, capacity)
+    display_interface(drone_map, capacity)
 
 
 if __name__ == "__main__":
