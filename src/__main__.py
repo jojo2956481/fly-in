@@ -53,37 +53,12 @@ def interpolate_drone_position(path, sim_turn, world_positions):
     return resolve_position(path[-1][0], world_positions)
 
 
-def capacity_info(drone_map, drone_paths, turn, finish):
-    print(f"--- tour {turn} ---")
-    lst_hub = []
-    for hub in drone_map.hubs:
-        if hub.zone == "restricted":
-            conn = copy.deepcopy(hub)
-            conn.name = f"{lst_hub[-1].name}-{hub.name}"
-            lst_hub.append(conn)
-        lst_hub.append(hub)
-    for hub in lst_hub:
-        count_hub = sum(
-            1
-            for path in drone_paths
-            for (name, t, state) in path
-            if name == hub.name and t == turn
-        )
-        label = f"{hub.name}: {count_hub} / {hub.max_drones}"
-        if hub.kind == "end" and count_hub > 0:
-            finish += 1
-            label = f"{hub.name}: {finish} / {hub.max_drones}"
-        print(label)
-    return finish
-
-
 def display_interface(drone_map, capacity):
     world_positions = compute_world_layout(drone_map.hubs)
     drone_paths = []
     drone_paths, horizon = schedule_drones(drone_map)
     if not drone_paths:
         raise ValueError("The map is impossible to solve")
-    print(drone_paths)
     SECONDS_PER_TURN = 0.6
     pygame.init()
     width, height = WINDOW_W, WINDOW_H
@@ -107,13 +82,11 @@ def display_interface(drone_map, capacity):
     last_mouse_pos = None
     running = True
     temp = -1
-    finish = 0
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.VIDEORESIZE and not fullscreen:
-                print("here")
                 if event.w > 0 and event.h > 0:
                     width, height = event.w, event.h
                     pending_size = (event.w, event.h)
@@ -129,7 +102,6 @@ def display_interface(drone_map, capacity):
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
                 camera.reset()
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                finish = 0
                 manual_mode = False
                 manual_turn = 0
                 sim_start_ticks = pygame.time.get_ticks()
@@ -142,8 +114,6 @@ def display_interface(drone_map, capacity):
                 if not manual_mode:
                     manual_mode = True
                     manual_turn = int(sim_turn)
-                if finish > 0:
-                    finish -= 1
                 manual_turn = max(manual_turn - 1, 0)
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 manual_mode = False
@@ -173,7 +143,6 @@ def display_interface(drone_map, capacity):
             screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
             camera.resize(width, height)
             pending_size = None
-            print("resize applique ->", width, height)
         draw_map(screen, drone_map, world_positions, camera)
         if manual_mode:
             sim_turn = float(manual_turn)
@@ -197,8 +166,6 @@ def display_interface(drone_map, capacity):
                 dis += f"D{id}-{result[0]} "
             id = id + 1
         if temp < int(sim_turn) and sim_turn < horizon + 1:
-            if capacity:
-                finish = capacity_info(drone_map, drone_paths, int(sim_turn), finish)
             print(dis)
         temp = int(sim_turn)
         window_simu_info(screen, drone_map.nb_drones, int(sim_turn), horizon)
@@ -216,5 +183,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception as e:
+    except FileExistsError as e:
         print(e)

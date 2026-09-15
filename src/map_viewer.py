@@ -51,7 +51,6 @@ class Camera:
     def __init__(self, width, height, max_x, max_y, min_x, min_y):
         self.x = ((max_x + min_x) / 2) * UNIT_SCALE
         self.y = -((max_y + min_y) / 2) * UNIT_SCALE
-        print(self.x, self.y)
         self.width = width
         self.height = height
         margin = 50
@@ -124,7 +123,6 @@ def draw_zone_symbol(screen, pos, radius, zone, symbol_color):
 
 def draw_map(screen, drone_map, world_positions, camera):
     screen.fill(BG_COLOR)
-    # hub_by_name = {h.name: h for h in drone_map.hubs}
     for conn in drone_map.connections:
         p1 = camera.world_to_screen(*world_positions[conn.src])
         p2 = camera.world_to_screen(*world_positions[conn.dst])

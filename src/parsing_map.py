@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Literal
+from typing import Optional, Literal, Any
 import re
 
 
@@ -7,7 +7,7 @@ class Hub(BaseModel):
     name: str
     x: int
     y: int
-    kind: Literal["start", "hub", "end"] = "hub"
+    kind: Literal["start", "hub", "end", ] = "hub"
     color: Optional[str] = None
     zone: str = "normal"
     max_drones: int = 1
@@ -94,7 +94,7 @@ def parse_attrs_conn(attr_str: str, nb_line: int) -> dict:
     return attrs
 
 
-def load_map(path_map):
+def load_map(path_map) -> None:
     try:
         with open(path_map, "r", encoding="utf-8") as map_file:
             return map_file.readlines()
