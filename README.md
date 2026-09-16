@@ -43,7 +43,12 @@ H × T
 - Dijkstra uses heapq (the priority queue), the queue is organized like a tree, so for each modification:
 
 ```
-o(log(H·T))
+heapq complexity :      heapq organisation :        
+                               2
+                              / \
+    o(log(N))                3   10
+                            / \
+                           8   5
 ```
 For each state processed, the heap may be modified or reorganized, so:
 
