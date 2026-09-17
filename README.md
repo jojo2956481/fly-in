@@ -9,7 +9,7 @@ Routing relies on a space-time <font color="#e91c0d">Dijkstra</font> algorithm c
 
 A graphical interface (Pygame) lets you view the map and <font color="#e91c0d">animate</font> the drones' movement turn by turn, with zoom, free panning, and a step-by-step mode.
 
-<img src="map.png" alt="Map" width="500">
+<img src="map.png" alt="Map" width="5000">
 
 ## algorithm
 
