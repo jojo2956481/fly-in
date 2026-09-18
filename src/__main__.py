@@ -11,6 +11,7 @@ from src.map_viewer import (
 
 
 def take_arg() -> str | Any:
+    "Retrieves the arguments for the program's operation."
     parser = argparse.ArgumentParser()
     parser.add_argument("--map", default=None)
     args = parser.parse_args()
@@ -24,6 +25,8 @@ def resolve_position(
     name: str,
     world_positions: dict[str, tuple[float, float]],
 ) -> tuple[float, float]:
+    "Find the midpoint position of a "
+    "connection before a restricted hub."
     if name in world_positions:
         return world_positions[name]
     src, dst = name.split("-", 1)
@@ -37,6 +40,7 @@ def interpolate_drone_position(
     sim_turn: float,
     world_positions: dict[str, tuple[float, float]],
 ) -> Optional[tuple[float, float]]:
+    "calculate the position of a drone on a fractional lap"
     if sim_turn < path[0][1] or sim_turn > path[-1][1]:
         return None
     for (name_a, t_a, _), (name_b, t_b, _) in zip(path, path[1:]):
@@ -51,11 +55,11 @@ def interpolate_drone_position(
                 xa + (xb - xa) * progress,
                 ya + (yb - ya) * progress,
             )
-
     return resolve_position(path[-1][0], world_positions)
 
 
 def display_interface(drone_map: Map_format) -> None:
+    "manages the simulation and graphical representation"
     world_positions = compute_world_layout(drone_map.hubs)
     drone_paths, horizon = schedule_drones(drone_map)
     if not drone_paths:
@@ -230,6 +234,7 @@ def display_interface(drone_map: Map_format) -> None:
 
 
 def main() -> None:
+    "main function, retrieves the map for the simulation"
     path_map = take_arg()
     drone_map = parser_file(path_map)
     display_interface(drone_map)

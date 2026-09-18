@@ -4,6 +4,7 @@ from typing import Optional, Literal, cast
 
 
 class Hub(BaseModel):
+    "Hub object: retrieves information from a hub and stores it in a variable."
     name: str
     x: int
     y: int
@@ -16,12 +17,15 @@ class Hub(BaseModel):
     @field_validator("max_drones")
     @classmethod
     def positive_capacity(cls, v: int) -> int:
+        "In the method, verify that the `drones` variable is greater than 0."
         if v is not None and v <= 0:
             raise ValueError("max_drones must be over 0")
         return v
 
 
 class Connection(BaseModel):
+    """Connectopn object: retrieves information
+    from a Connection and stores it in a variable."""
     src: str
     dst: str
     max_link_capacity: int = 1
@@ -29,12 +33,15 @@ class Connection(BaseModel):
     @field_validator("max_link_capacity")
     @classmethod
     def positive_capacity(cls, v: int) -> int:
+        "In the method, verify that the `max_link_capacity`"
+        "variable is greater than 0."
         if v is not None and v <= 0:
             raise ValueError("max_link_capacity must be over 0")
         return v
 
 
 class Map_format(BaseModel):
+    "an object that contains a list of hubs and a list of connections"
     nb_drones: int
     hubs: list[Hub] = Field(default_factory=list)
     connections: list[Connection] = Field(default_factory=list)
@@ -42,12 +49,15 @@ class Map_format(BaseModel):
     @field_validator("nb_drones")
     @classmethod
     def positive_capacity(cls, v: int) -> int:
+        "In the method, verify that the `nb_drones`"
+        "variable is greater than 0."
         if v is not None and v <= 0:
             raise ValueError("nb_drones must be over 0")
         return v
 
 
 class Patterns:
+    "Class for finding patterns: Hub, end_hub, start_hub, connections."
     NB_DRONES = re.compile(r"^nb_drones:\s*(\d+)\s*$")
     HUB = re.compile(
         r"^(start_hub|hub|end_hub):\s*"
@@ -79,6 +89,7 @@ ZONE_VALUES: tuple[str, ...] = (
 
 
 def _check_spacing(attr_str: str, nb_line: int) -> None:
+    "Validates allowed spaces in the metadata."
     if attr_str.startswith(" ") or attr_str.endswith(" "):
         raise ValueError(
             f"Line {nb_line} the metadata must "
@@ -89,6 +100,7 @@ def _check_spacing(attr_str: str, nb_line: int) -> None:
 
 
 def parse_attrs(attr_str: str, nb_line: int) -> dict[str, str]:
+    "Validates keys and authorized values in the hub metadata"
     if not attr_str:
         return {}
     attr_str = attr_str.strip().lstrip("[").rstrip("]")
@@ -109,6 +121,7 @@ def parse_attrs(attr_str: str, nb_line: int) -> dict[str, str]:
 
 
 def parse_attrs_conn(attr_str: str, nb_line: int) -> dict[str, str]:
+    "Validates keys and authorized values in connection the metadata"
     if not attr_str:
         return {}
     attr_str = attr_str.strip().lstrip("[").rstrip("]")
@@ -127,6 +140,7 @@ def parse_attrs_conn(attr_str: str, nb_line: int) -> dict[str, str]:
 
 
 def load_map(path_map: str) -> list[str]:
+    "Try opening a map"
     try:
         with open(path_map, "r", encoding="utf-8") as map_file:
             return map_file.readlines()
@@ -135,6 +149,7 @@ def load_map(path_map: str) -> list[str]:
 
 
 def _strip_comment(raw_line: str) -> str:
+    "Ignore comments on a valid line"
     idx = raw_line.find("#")
     if idx != -1:
         raw_line = raw_line[:idx]
@@ -146,6 +161,7 @@ def _hub_default_capacity(
     zone: Optional[str],
     nb_drones: int,
 ) -> int:
+    "Determines the default hub capacity."
     if zone == "blocked":
         return 0
     if kind in ("start", "end"):
@@ -160,6 +176,8 @@ def _build_hub(
     seen_names: set[str],
     seen_coords: set[tuple[int, int]],
 ) -> Hub:
+    """retrieves the information from
+    the valid text file to create the hub object"""
     kind_raw, name, x_str, y_str, attr_str = match.groups()
     if name in seen_names:
         raise ValueError(
@@ -199,6 +217,8 @@ def _build_connection(
     match: "re.Match[str]",
     nb_line: int,
 ) -> Connection:
+    """retrieves the information from
+    the valid text file to create the cennection object"""
     src, dst, attr_conn = match.groups()
     attrs = parse_attrs_conn(attr_conn or "", nb_line)
     default_cap = 1
@@ -219,6 +239,7 @@ def _validate_connections(
     connections: list[Connection],
     conn_lines: list[int],
 ) -> None:
+    """validates the connections"""
     hub_names = {hub.name for hub in hubs}
     hub_by_name = {hub.name: hub for hub in hubs}
     seen_pairs: set[frozenset[str]] = set()
@@ -250,6 +271,8 @@ def _validate_connections(
 
 
 def parser_file(path_map: str) -> Map_format:
+    """Read the .txt file line by line to
+      retrieve and validate the authorized arguments"""
     nb_drones: Optional[int] = None
     hubs: list[Hub] = []
     conn_lines: list[int] = []

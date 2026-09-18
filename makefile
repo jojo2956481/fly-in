@@ -4,7 +4,7 @@ run:
 	@uv run python -m src $(ARGS)
 
 install:
-	@uv add flake8 mypy pydantic
+	@uv add flake8 mypy pydantic pygame
 
 debug:
 	@$(PYTHON) -m pdb src/main.py

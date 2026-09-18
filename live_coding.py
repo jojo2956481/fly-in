@@ -1,4 +1,4 @@
-
+import copy
 
 finish = capacity_info(drone_map, drone_paths, int(sim_turn), finish)
 

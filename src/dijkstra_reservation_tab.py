@@ -6,6 +6,7 @@ from src.parsing_map import Connection, Map_format, Hub
 
 
 def zone_cost(zone: str) -> Optional[int]:
+    """return the cost of a 'blocked' or 'restricted' zone"""
     if zone == "blocked":
         return None
     if zone == "restricted":
@@ -88,7 +89,6 @@ def dijkstra_spacetime(
         Optional[tuple[str, int]]] = {start_state: None}
     pq: list[tuple[tuple[int, int], tuple[str, int]]] = [((0, 0), start_state)]
     inf: tuple[int, int] = (10**9, 10**9)
-
     while pq:
         key, (hub_name, t) = heapq.heappop(pq)
 
@@ -99,16 +99,13 @@ def dijkstra_spacetime(
             continue
         if t >= max_horizon:
             continue
-
         hub = hub_by_name[hub_name]
-
         nt = t + 1
         if reservation.hub_has_room(hub_name, nt, hub.max_drones):
             relax(
                 dist, parent, pq,
                 (hub_name, t), (hub_name, nt), key[1],
             )
-
         for neighbor_name in hub.neighbors:
             neighbor = hub_by_name[neighbor_name]
             cost = zone_cost(neighbor.zone)
@@ -133,7 +130,6 @@ def dijkstra_spacetime(
                 dist, parent, pq,
                 (hub_name, t), (neighbor_name, nt), penalty,
             )
-
     return None
 
 
@@ -142,7 +138,6 @@ def annotate_path(
         hub_by_name: dict[str, Hub]) -> list[tuple[str, int, str]]:
     if not path:
         return []
-
     annotated: list[tuple[str, int, str]] = [(path[0][0], path[0][1], "move")]
     for (hub_a, t_a), (hub_b, t_b) in zip(path, path[1:]):
         if hub_a == hub_b:
