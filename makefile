@@ -14,11 +14,11 @@ clean:
 	@rm -rf .mypy_cache/
 
 lint:
-	@flake8 src/
-	@mypy src/ --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --follow-imports=skip
+	@uv run flake8 src/
+	@uv run mypy src/ --warn-return-any --warn-unused-ignor
 
 lint-strict:
-	@mypy src/ --strict --follow-imports=silent
+	@uv run mypy src/ --strict --follow-imports=silent
 
 .PHONY: 
 	install
