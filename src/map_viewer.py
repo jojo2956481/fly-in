@@ -1,7 +1,5 @@
 from typing import Optional
-
 import pygame
-
 from src.parsing_map import Map_format
 from src.dijkstra_reservation_tab import Scheduler, Step
 
@@ -9,11 +7,13 @@ from src.dijkstra_reservation_tab import Scheduler, Step
 Position = tuple[float, float]
 Color = tuple[int, int, int]
 
+
 class Config:
-    WINDOW_W: int = 1400
-    WINDOW_H: int = 800
+    """class config: configuration variable for window display"""
+    WINDOW_W: int = 2000
+    WINDOW_H: int = 1200
     UNIT_SCALE: int = 80
-    ZOOM_MIN: float = 0.15
+    ZOOM_MIN: float = 0.80
     ZOOM_MAX: float = 6.0
     ZOOM_STEP: float = 1.15
     LINE_WIDTH: int = 3
@@ -27,6 +27,7 @@ class Config:
 
 
 class Palette:
+    """class palette: color variable"""
     BG: Color = (250, 240, 217)
     LINE: Color = (150, 140, 120)
     TEXT: Color = (60, 55, 45)
@@ -50,7 +51,7 @@ class Palette:
 
 
 class Camera:
-    """Gère le zoom et le déplacement (pan), et convertit monde -> écran."""
+    """class camera: manages the movement and zoom of the viewpoint"""
 
     def __init__(
         self,
@@ -76,20 +77,24 @@ class Camera:
         self.zoom: float = self.dep_zoom
 
     def resize(self, width: int, height: int) -> None:
+        """resize the window"""
         self.width = width
         self.height = height
 
     def reset(self) -> None:
+        """Reset the zoom and center the visual."""
         self.x = ((self.max_x + self.min_x) / 2) * Config.UNIT_SCALE
         self.y = -((self.max_y + self.min_y) / 2) * Config.UNIT_SCALE
         self.zoom = self.dep_zoom
 
     def world_to_screen(self, wx: float, wy: float) -> tuple[int, int]:
+        """converts a world position (map coordinates) to screen pixels"""
         sx = (wx - self.x) * self.zoom + self.width / 2
         sy = (wy - self.y) * self.zoom + self.height / 2
         return int(sx), int(sy)
 
     def screen_to_world(self, sx: float, sy: float) -> Position:
+        """converts a screen pixels to world position (map coordinates)"""
         wx = (sx - self.width / 2) / self.zoom + self.x
         wy = (sy - self.height / 2) / self.zoom + self.y
         return wx, wy
@@ -97,6 +102,7 @@ class Camera:
     def zoom_at(
         self, screen_pos: tuple[int, int], factor: float
     ) -> None:
+        """Zoom in on the location of the coordinates."""
         before = self.screen_to_world(*screen_pos)
         self.zoom = max(
             Config.ZOOM_MIN, min(Config.ZOOM_MAX, self.zoom * factor)
@@ -106,13 +112,13 @@ class Camera:
         self.y += before[1] - after[1]
 
     def pan(self, dx: float, dy: float) -> None:
+        """Update coordinate location"""
         self.x -= dx / self.zoom
         self.y -= dy / self.zoom
 
 
 class Viewer:
-    """Fenêtre Pygame : affiche la map et anime les drones tour par tour,
-    avec zoom, pan, plein écran et mode pas-à-pas."""
+    """"""
 
     def __init__(self, drone_map: Map_format) -> None:
         self.drone_map = drone_map
@@ -136,8 +142,6 @@ class Viewer:
         self.pending_size: Optional[tuple[int, int]] = None
         self.last_resize_ms = 0
         self.running = True
-
-    # --- rendu ---
 
     def _get_font(self, size: int) -> pygame.font.Font:
         if size not in self._font_cache:
@@ -271,7 +275,7 @@ class Viewer:
                 )
 
     def _draw_hud(self) -> None:
-        font = pygame.font.Font(None, 28)
+        font = pygame.font.Font(None, 30)
         turn = min(int(self.sim_turn), self.horizon)
         lines = [
             "----Simulation----",
@@ -284,10 +288,10 @@ class Viewer:
 
     def _draw_info(self) -> None:
         width, height = self.screen.get_size()
-        font = pygame.font.Font(None, 28)
+        font = pygame.font.Font(None, 30)
         lines = [
             "----Simulation----",
-           "Press Esc to close",
+            "Press Esc to close",
             "Press c to refocus",
             "Press <- and -> go manual mode",
             "Press escape to quit manual mode",
@@ -296,15 +300,12 @@ class Viewer:
         window_width = 340
         window_height = 30 + len(lines) * 52
         window = pygame.Rect(
-        width - window_width - 20, 20,
-        window_width, window_height
+            width - window_width - 20, 20,
+            window_width, window_height
         )
         for i, line in enumerate(lines):
             text = font.render(line, True, (0, 0, 0))
             self.screen.blit(text, (window.x + 5, window.y + 5 + i * 40))
-      
-
-    # --- événements ---
 
     def _handle_key(self, key: int) -> None:
         if key == pygame.K_F11:
@@ -408,7 +409,19 @@ class Viewer:
             ) / 1000
             self.sim_turn = elapsed / Config.SECONDS_PER_TURN
 
-    # --- boucle principale ---
+    def _display_movement(self, temp: int) -> int:
+        id = 1
+        dis = ""
+        for path in self.drone_paths:
+            result = next((x for x in path if x[1] == int(self.sim_turn + 1)),
+                          None)
+            if result:
+                dis += f"D{id}-{result[0]} "
+            id = id + 1
+        if temp < int(self.sim_turn) and self.sim_turn < self.horizon + 1:
+            print(dis)
+        temp = int(self.sim_turn)
+        return temp
 
     def run(self) -> None:
         pygame.init()
@@ -425,7 +438,7 @@ class Viewer:
             max(xs), max(ys), min(xs), min(ys),
         )
         self.sim_start_ticks = pygame.time.get_ticks()
-
+        temp = -1
         while self.running:
             for event in pygame.event.get():
                 self._handle_event(event)
@@ -436,6 +449,7 @@ class Viewer:
             self._draw_drones()
             self._draw_hud()
             self._draw_info()
+            temp = self._display_movement(temp)
 
             pygame.display.flip()
             clock.tick(60)

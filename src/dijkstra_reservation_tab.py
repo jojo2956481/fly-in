@@ -2,6 +2,7 @@
 import heapq
 from collections import defaultdict
 from typing import Optional
+from src.parsing_map import Map_format, Connection
 
 
 State = tuple[str, int]
@@ -20,8 +21,7 @@ def zone_cost(zone: str) -> Optional[int]:
 
 
 class ReservationTable:
-    """Mémorise les créneaux (hub, tour) et (lien, tour) déjà réservés,
-    pour faire respecter les capacités entre drones successifs."""
+    """."""
 
     def __init__(self) -> None:
         self.hub_occupancy: dict[State, int] = defaultdict(int)
@@ -46,16 +46,14 @@ class ReservationTable:
 
 
 class Scheduler:
-    """Planifie le déplacement de tous les drones, un par un, via un
-    Dijkstra spatio-temporel couplé à une table de réservation."""
-
-    def __init__(self, drone_map, max_horizon: int = 200) -> None:
+    """"""
+    def __init__(self, drone_map: Map_format, max_horizon: int = 200) -> None:
         self.drone_map = drone_map
         self.max_horizon = max_horizon
         self.hub_by_name = {h.name: h for h in drone_map.hubs}
         self.reservation = ReservationTable()
 
-    def _find_connection(self, src: str, dst: str):
+    def _find_connection(self, src: str, dst: str) -> Connection:
         return next(
             c for c in self.drone_map.connections
             if {c.src, c.dst} == {src, dst}
@@ -110,7 +108,6 @@ class Scheduler:
     ) -> None:
         hub = self.hub_by_name[hub_name]
 
-        # rester sur place
         nt = t + 1
         if self.reservation.hub_has_room(hub_name, nt, hub.max_drones):
             self._relax(
@@ -118,7 +115,6 @@ class Scheduler:
                 (hub_name, t), (hub_name, nt), key[1],
             )
 
-        # se déplacer vers chaque voisin
         for neighbor_name in hub.neighbors:
             neighbor = self.hub_by_name[neighbor_name]
             cost = zone_cost(neighbor.zone)

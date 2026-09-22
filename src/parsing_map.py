@@ -4,6 +4,7 @@ from typing import Optional, Literal, cast
 
 
 class Hub(BaseModel):
+    """class hub: add the object's attributes and validates format"""
     name: str
     x: int
     y: int
@@ -16,12 +17,14 @@ class Hub(BaseModel):
     @field_validator("max_drones")
     @classmethod
     def positive_capacity(cls, v: int) -> int:
+        """validates the value of max_drones"""
         if v is not None and v <= 0:
             raise ValueError("max_drones must be over 0")
         return v
 
 
 class Connection(BaseModel):
+    """class connection: add the object's attributes and validates format"""
     src: str
     dst: str
     max_link_capacity: int = 1
@@ -29,12 +32,15 @@ class Connection(BaseModel):
     @field_validator("max_link_capacity")
     @classmethod
     def positive_capacity(cls, v: int) -> int:
+        """validates the value of max_link_capacity"""
         if v is not None and v <= 0:
             raise ValueError("max_link_capacity must be over 0")
         return v
 
 
 class Map_format(BaseModel):
+    """class map_format: add the object's
+      attributes of list hub, list connection and validates format"""
     nb_drones: int
     hubs: list[Hub] = Field(default_factory=list)
     connections: list[Connection] = Field(default_factory=list)
@@ -42,14 +48,14 @@ class Map_format(BaseModel):
     @field_validator("nb_drones")
     @classmethod
     def positive_capacity(cls, v: int) -> int:
+        """validates the value of nb_drones"""
         if v is not None and v <= 0:
             raise ValueError("nb_drones must be over 0")
         return v
 
 
 class MapParser:
-    """Lit un fichier de map, valide sa syntaxe et ses contraintes, et
-    produit un Map_format (hubs, connexions, voisins renseignés)."""
+    """class MapParser: verify that the data is valid."""
 
     NB_DRONES = re.compile(r"^nb_drones:\s*(\d+)\s*$")
     HUB = re.compile(
@@ -86,8 +92,11 @@ class MapParser:
         self.conn_lines: list[int] = []
         self.seen_names: set[str] = set()
         self.seen_coords: set[tuple[int, int]] = set()
+        self.start: int = 0
+        self.end: int = 0
 
     def _load(self) -> list[str]:
+        """Try opening the file"""
         try:
             with open(self.path_map, "r", encoding="utf-8") as fp:
                 return fp.readlines()
@@ -96,6 +105,7 @@ class MapParser:
 
     @staticmethod
     def _strip_comment(raw_line: str) -> str:
+        """Ignore the comments"""
         idx = raw_line.find("#")
         if idx != -1:
             raw_line = raw_line[:idx]
@@ -103,6 +113,7 @@ class MapParser:
 
     @staticmethod
     def _check_spacing(attr_str: str, nb_line: int) -> None:
+        """Check the spaces in the metadata."""
         if attr_str.startswith(" ") or attr_str.endswith(" "):
             raise ValueError(
                 f"Line {nb_line} the metadata must "
@@ -118,11 +129,18 @@ class MapParser:
         allowed: tuple[str, ...],
         check_zone: bool,
     ) -> dict[str, str]:
+        """validates the metadata format"""
         if not attr_str:
             return {}
+        brac0 = attr_str.count("[")
+        brac1 = attr_str.count("]")
+        if brac0 != 1 or brac1 != 1:
+            raise ValueError(f"Line {nb_line} Error Too many brackets")
         attr_str = attr_str.strip().lstrip("[").rstrip("]")
         self._check_spacing(attr_str, nb_line)
         attrs: dict[str, str] = {}
+        if "=" not in attr_str:
+            raise ValueError(f"Line {nb_line} Error format metadata")
         for pair in attr_str.split():
             if "=" not in pair:
                 continue
@@ -143,6 +161,7 @@ class MapParser:
     def _default_capacity(
         self, kind: str, zone: Optional[str]
     ) -> int:
+        """adds default drone capacity"""
         if zone == "blocked":
             return 0
         if kind in ("start", "end"):
@@ -150,6 +169,7 @@ class MapParser:
         return 1
 
     def _build_hub(self, match: "re.Match[str]", nb_line: int) -> Hub:
+        """Adds the arguments to the hub object and validates them."""
         kind_raw, name, x_str, y_str, attr_str = match.groups()
         if name in self.seen_names:
             raise ValueError(
@@ -168,17 +188,29 @@ class MapParser:
             attr_str or "", nb_line, self.HUB_KEYS, True
         )
         kind = self.KIND_MAP[kind_raw]
+        if kind == "start":
+            self.start += 1
+        if kind == "end":
+            self.end += 1
+        if self.end > 1 or self.start > 1:
+            raise ValueError(
+                f"Line {nb_line}: end or start "
+                f"mus be equal to 1: {name}")
         default_cap = self._default_capacity(kind, attrs.get("zone"))
         max_drones = (
             int(attrs["max_drones"])
             if "max_drones" in attrs
             else default_cap
         )
+        if kind == "start" or kind == "end":
+            max_drones = self.nb_drones
+        if "-" in name:
+            raise ValueError(f"Line {nb_line}: Error '-' in {name}")
         return Hub(
             name=name,
             x=int(x_str),
             y=int(y_str),
-            kind=kind,
+            kind=cast(Literal["start", "hub", "end"], kind),
             color=attrs.get("color"),
             zone=attrs.get("zone", "normal"),
             max_drones=max_drones,
@@ -187,7 +219,12 @@ class MapParser:
     def _build_connection(
         self, match: "re.Match[str]", nb_line: int
     ) -> Connection:
+        """Adds the arguments to the cannection object and validates them."""
         src, dst, attr_conn = match.groups()
+        if src not in self.seen_names or dst not in self.seen_names:
+            raise ValueError(
+                f"Error line {nb_line} hub must"
+                " be difine before connection")
         attrs = self._parse_attrs(
             attr_conn or "", nb_line, self.CONN_KEYS, False
         )
@@ -201,6 +238,7 @@ class MapParser:
         )
 
     def _validate_connections(self) -> None:
+        """Check that the connectors are compatible."""
         hub_names = {hub.name for hub in self.hubs}
         hub_by_name = {hub.name: hub for hub in self.hubs}
         seen_pairs: set[frozenset[str]] = set()
@@ -231,6 +269,7 @@ class MapParser:
             hub_by_name[conn.dst].neighbors.append(conn.src)
 
     def parse(self) -> Map_format:
+        """read the text file line by line to build the objects"""
         for nb_line, raw_line in enumerate(self._load(), start=1):
             line = self._strip_comment(raw_line)
             if not line:
@@ -243,10 +282,20 @@ class MapParser:
                 continue
 
             if match := self.HUB.match(line):
+                if self.nb_drones is None:
+                    raise ValueError(
+                        "number of drones must"
+                        " be defines in first line\n"
+                        f"Error line {nb_line}")
                 self.hubs.append(self._build_hub(match, nb_line))
                 continue
 
             if match := self.CONNECTION.match(line):
+                if self.nb_drones is None:
+                    raise ValueError(
+                        "number of drones must"
+                        " be defines in first line\n"
+                        f"Error line {nb_line}")
                 self.connections.append(
                     self._build_connection(match, nb_line)
                 )
@@ -257,6 +306,9 @@ class MapParser:
 
         if self.nb_drones is None:
             raise ValueError("Missing 'nb_drones:' line in map file")
+        lstkind = [hub.kind for hub in self.hubs]
+        if "start" not in lstkind or "end" not in lstkind:
+            raise ValueError("Error data must contain end and start")
 
         self._validate_connections()
         return Map_format(

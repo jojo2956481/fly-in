@@ -1,12 +1,12 @@
+
 nb_drones: 3
-
 # === LAYER 0: The Nightmare Begins ===
-start_hub: start 0 0 [color=green]
 
+start_hub: start 0 0 [color=green zone=blocked]
 # Single-file entry gates (extreme bottleneck)
-hub: gate_hell1 2 0 [zone=restricted color=red max_drones=1]
-hub: gate_hell2 3 0 [color=green max_drones=1]
-hub: gate_hell3 3 1 [zone=priority color=red max_drones=1]
+hub: gate_hell1 2 0 [color=red max_drones=1]
+hub: gate_hell2 3 0 [zone=blocked color=green max_drones=5]
+hub: gate_hell3 3 1 [color=red max_drones=1]
 hub: gate_hell4 5 0 [color=red max_drones=1]
 end_hub: impossible_goal 6 0 [color=rainbow]
 
@@ -16,3 +16,13 @@ connection: gate_hell1-gate_hell3 [max_link_capacity=1]
 connection: gate_hell3-gate_hell4 [max_link_capacity=1]
 connection: gate_hell2-gate_hell4 [max_link_capacity=1]
 connection: gate_hell4-impossible_goal [max_link_capacity=1]
+
+# nb drones pas premiere ligne V
+# on peut pas 2 start hub, pareil pour end V
+# connection doit avoir le hub defini avant V
+# double bracket pour metadata V
+# metadata vide V
+# zone blocked qui bug V
+# la valeur max drones qui dpot etre ignore pour start et end V
+# erreur personnalisé pour les - dans les noms V
+# message d'erreur si y manque start ou end V
